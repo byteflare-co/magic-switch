@@ -144,6 +144,7 @@ public final class SetupWizardViewModel: ObservableObject {
         let host = HostMac(
             label: peer.hostName,
             hostName: peer.hostName,
+            peerHostId: peer.hostId,
             isPaired: true,
             isOnline: true
         )
@@ -156,7 +157,7 @@ public final class SetupWizardViewModel: ObservableObject {
 
     // MARK: - Completion
 
-    private func completeSetup() {
+    public func completeSetup() {
         Task {
             // ホスト情報を保存
             try? await configStore.save(registeredHosts, to: "hosts.json")
@@ -167,6 +168,7 @@ public final class SetupWizardViewModel: ObservableObject {
                 from: "config.json",
                 default: AppConfig()
             )
+            config.isFirstLaunch = false
             config.launchAtLogin = true
             try? await configStore.save(config, to: "config.json")
 

@@ -51,7 +51,7 @@ struct SetupWizardView: View {
                 Spacer()
                 if viewModel.currentStep == .completion {
                     Button("完了") {
-                        onComplete()
+                        viewModel.completeSetup()
                     }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
@@ -67,6 +67,11 @@ struct SetupWizardView: View {
             .padding()
         }
         .frame(width: 550, height: 420)
+        .onChange(of: viewModel.isComplete) { isComplete in
+            if isComplete {
+                onComplete()
+            }
+        }
     }
 }
 

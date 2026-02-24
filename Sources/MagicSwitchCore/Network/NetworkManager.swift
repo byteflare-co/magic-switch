@@ -218,6 +218,29 @@ public actor NetworkManager: NetworkManagerProtocol {
         try await connection.send(command)
     }
 
+    /// コマンドの送信（peerHostId で接続先を特定、未接続なら自動接続）
+    public func sendCommandToPeer(_ command: DeviceCommand, peerHostId: String) async throws {
+        // 1. 既存の接続を peerMap から検索
+        if let uuid = peerMap[peerHostId],
+           let connection = connections[uuid] {
+            try await connection.send(command)
+            return
+        }
+
+        // 2. discoveredPeers から該当ピアを探して自動接続
+        guard let peerInfo = discoveredPeers[peerHostId] else {
+            throw MagicSwitchError.peerNotFound(hostId: UUID())
+        }
+
+        try await connectToPeer(peerInfo)
+
+        guard let uuid = peerMap[peerHostId],
+              let connection = connections[uuid] else {
+            throw MagicSwitchError.peerNotFound(hostId: UUID())
+        }
+        try await connection.send(command)
+    }
+
     /// ピアがオンラインかどうか確認
     public func isPeerOnline(_ hostId: UUID) -> Bool {
         connections[hostId] != nil

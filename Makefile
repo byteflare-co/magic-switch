@@ -21,8 +21,12 @@ run: build
 	.build/debug/MagicSwitch
 
 # テスト実行
+# Command Line Tools 環境では Testing.framework のパスを明示する必要がある
+TESTING_FW_PATH := /Library/Developer/CommandLineTools/Library/Developer/Frameworks
 test:
-	swift test
+	swift test \
+		-Xswiftc -F -Xswiftc $(TESTING_FW_PATH) \
+		-Xlinker -rpath -Xlinker $(TESTING_FW_PATH)
 
 # アプリバンドル作成
 bundle:

@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -23,7 +23,8 @@ let package = Package(
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
                 .product(name: "LaunchAtLogin", package: "LaunchAtLogin-Modern"),
             ],
-            path: "Sources/MagicSwitch"
+            path: "Sources/MagicSwitch",
+            swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .target(
             name: "MagicSwitchCore",
@@ -31,6 +32,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
             ],
             path: "Sources/MagicSwitchCore",
+            swiftSettings: [.swiftLanguageMode(.v5)],
             linkerSettings: [
                 .linkedFramework("IOBluetooth"),
                 .linkedFramework("Network"),

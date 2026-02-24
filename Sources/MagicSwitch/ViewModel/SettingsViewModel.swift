@@ -91,7 +91,7 @@ public final class SettingsViewModel: ObservableObject {
         }
     }
 
-    public func addHost(label: String, hostName: String) {
+    public func addHost(label: String, hostName: String, peerHostId: String? = nil) {
         let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedLabel.isEmpty else {
@@ -109,13 +109,13 @@ public final class SettingsViewModel: ObservableObject {
             return
         }
 
-        let host = HostMac(label: trimmedLabel, hostName: hostName)
+        let host = HostMac(label: trimmedLabel, hostName: hostName, peerHostId: peerHostId)
         hosts.append(host)
         saveHosts()
     }
 
     public func addHostFromPeer(_ peer: PeerInfo) {
-        addHost(label: peer.hostName, hostName: peer.hostName)
+        addHost(label: peer.hostName, hostName: peer.hostName, peerHostId: peer.hostId)
     }
 
     public func updateHost(_ host: HostMac) {

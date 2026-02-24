@@ -52,7 +52,12 @@ public actor DeviceDiscoveryService {
 
         return hosts.map { host in
             var updated = host
-            updated.isOnline = peers.contains { $0.hostId == host.id.uuidString }
+            if let peerHostId = host.peerHostId {
+                updated.isOnline = peers.contains { $0.hostId == peerHostId }
+            } else {
+                // レガシーホスト: hostName でフォールバックマッチ
+                updated.isOnline = peers.contains { $0.hostName == host.hostName }
+            }
             if updated.isOnline {
                 updated.lastSeen = Date()
             }

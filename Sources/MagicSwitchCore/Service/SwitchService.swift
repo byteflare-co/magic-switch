@@ -212,7 +212,10 @@ public actor SwitchService {
                 currentPhase: .verifying
             )))
 
-            try await network.sendCommand(.connectAll, to: targetHost.id)
+            guard let peerHostId = targetHost.peerHostId else {
+                throw MagicSwitchError.peerNotFound(hostId: targetHost.id)
+            }
+            try await network.sendCommandToPeer(.connectAll, peerHostId: peerHostId)
             logger.info("CONNECT_ALL sent to \(targetHost.label)")
 
             // レスポンスを待機
@@ -261,7 +264,10 @@ public actor SwitchService {
 
         do {
             // 1. 相手 Mac に UNREGISTER_ALL 送信
-            try await network.sendCommand(.unregisterAll, to: targetHost.id)
+            guard let peerHostId = targetHost.peerHostId else {
+                throw MagicSwitchError.peerNotFound(hostId: targetHost.id)
+            }
+            try await network.sendCommandToPeer(.unregisterAll, peerHostId: peerHostId)
             logger.info("UNREGISTER_ALL sent to \(targetHost.label)")
 
             // レスポンスを待機

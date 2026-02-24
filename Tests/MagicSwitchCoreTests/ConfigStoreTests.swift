@@ -39,7 +39,17 @@ struct HostMacTests {
         )
         #expect(host.label == "仕事用 MacBook Pro")
         #expect(host.hostName == "work-mbp")
+        #expect(host.peerHostId == nil)
         #expect(host.isPaired == false)
         #expect(host.isOnline == false)
+    }
+
+    @Test func testHostMacWithPeerHostId() {
+        let host = HostMac(
+            label: "仕事用 MacBook Pro",
+            hostName: "work-mbp",
+            peerHostId: "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+        )
+        #expect(host.peerHostId == "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX")
     }
 }

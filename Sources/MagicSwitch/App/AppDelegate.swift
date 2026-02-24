@@ -91,15 +91,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let wizardView = SetupWizardView(viewModel: viewModel) { [weak self] in
             self?.wizardWindow?.close()
             self?.wizardWindow = nil
-            guard let self else { return }
-            Task {
-                var config = await self.container.configStore.loadOrDefault(
-                    AppConfig.self,
-                    from: "config.json",
-                    default: AppConfig()
-                )
-                config.isFirstLaunch = false
-                try? await self.container.configStore.save(config, to: "config.json")
+            // ウィザード完了後にメニューバーを更新し、ポップオーバーを表示
+            self?.menuBarViewModel?.refresh()
+            // 少し遅延させてリフレッシュ完了後にポップオーバーを表示
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self?.menuBarController?.showPopover()
             }
         }
 
