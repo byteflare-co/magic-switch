@@ -18,6 +18,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarViewModel: MenuBarViewModel?
     private var wizardWindow: NSWindow?
 
+    // メニューバーアプリなので、全ウィンドウを閉じてもアプリを終了しない
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // .app バンドル外から直接実行された場合でもメニューバーに表示するため、
         // activationPolicy を .accessory に設定（LSUIElement 相当）

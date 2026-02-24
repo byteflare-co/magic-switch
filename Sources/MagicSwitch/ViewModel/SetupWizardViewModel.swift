@@ -130,13 +130,17 @@ public final class SetupWizardViewModel: ObservableObject {
     public func discoverPeers() {
         isDiscoveringPeers = true
         Task {
-            discoveredPeers = await discoveryService.discoverPeers()
+            let allPeers = await discoveryService.discoverPeers()
+            // 既に登録済みのホストを候補から除外
+            let registeredNames = Set(registeredHosts.map(\.hostName))
+            discoveredPeers = allPeers.filter { !registeredNames.contains($0.hostName) }
             isDiscoveringPeers = false
         }
     }
 
     public func registerHost(from peer: PeerInfo) {
         guard registeredHosts.count < 3 else { return }
+        guard !registeredHosts.contains(where: { $0.hostName == peer.hostName }) else { return }
         let host = HostMac(
             label: peer.hostName,
             hostName: peer.hostName,
