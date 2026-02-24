@@ -59,7 +59,7 @@ else
     <string>Magic Switch は Mac 間でデバイス切り替えコマンドを送受信するためにローカルネットワークを使用します。</string>
     <key>NSBonjourServices</key>
     <array>
-        <string>_magicswitch._tcp</string>
+        <string>_blueswitch._tcp.</string>
     </array>
 </dict>
 </plist>
@@ -84,6 +84,14 @@ cat > "${BUILD_DIR}/entitlements.plist" << PLIST
 </dict>
 </plist>
 PLIST
+
+# 7. ad-hoc 署名（リンカー署名を上書きして正しい署名にする）
+# これにより Gatekeeper が「壊れている」ではなく「開発元を確認できません」と表示する
+echo "Signing app bundle..."
+codesign --force --deep --sign - "${APP_BUNDLE}"
+
+# 署名検証
+codesign --verify --deep --strict "${APP_BUNDLE}" && echo "Signature OK" || echo "WARNING: Signature verification failed"
 
 echo "=== Build complete: ${APP_BUNDLE} ==="
 echo "To run: open ${APP_BUNDLE}"

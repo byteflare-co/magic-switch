@@ -25,7 +25,7 @@
     <string>Magic Switch は Mac 間でデバイス切り替えコマンドを送受信するためにローカルネットワークを使用します。</string>
     <key>NSBonjourServices</key>
     <array>
-        <string>_magicswitch._tcp</string>
+        <string>_blueswitch._tcp.</string>
     </array>
 </dict>
 </plist>
