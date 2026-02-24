@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>MagicSwitch</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.magicswitch.app</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleExecutable</key>
+    <string>MagicSwitch</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Magic Switch はデバイスの検出・接続切り替えに Bluetooth を使用します。</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Magic Switch は Mac 間でデバイス切り替えコマンドを送受信するためにローカルネットワークを使用します。</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_magicswitch._tcp</string>
+    </array>
+</dict>
+</plist>
