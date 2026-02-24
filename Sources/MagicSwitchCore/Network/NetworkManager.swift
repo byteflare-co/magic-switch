@@ -6,10 +6,10 @@ import SystemConfiguration
 
 /// Mac 間ネットワーク通信の統合管理
 /// PeerBrowser（検出）、PeerListener（受信）、PeerConnection（送受信）を統合管理する
-/// Blue Switch 互換: サービスタイプ `_blueswitch._tcp.`、テキストベースコマンド
+/// Blue Switch 互換: サービスタイプ `_magicswitch._tcp.`、テキストベースコマンド
 public actor NetworkManager: NetworkManagerProtocol {
     private let logger = MagicSwitchLogger.network
-    private let serviceType = "_blueswitch._tcp."
+    private let serviceType = "_magicswitch._tcp."
 
     // サブコンポーネント
     private let browser: PeerBrowser

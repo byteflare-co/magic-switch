@@ -10,8 +10,8 @@ public actor PeerBrowser: PeerDiscovering {
     private var browser: NWBrowser?
     private var discoveredPeers: [NWEndpoint: PeerInfo] = [:]
 
-    /// Blue Switch 互換サービスタイプ
-    public init(serviceType: String = "_blueswitch._tcp.") {
+    /// Magic Switch サービスタイプ
+    public init(serviceType: String = "_magicswitch._tcp.") {
         self.serviceType = serviceType
     }
 

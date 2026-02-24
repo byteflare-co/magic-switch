@@ -59,7 +59,7 @@ else
     <string>Magic Switch は Mac 間でデバイス切り替えコマンドを送受信するためにローカルネットワークを使用します。</string>
     <key>NSBonjourServices</key>
     <array>
-        <string>_blueswitch._tcp.</string>
+        <string>_magicswitch._tcp.</string>
     </array>
 </dict>
 </plist>

@@ -11,7 +11,7 @@ enum TXTRecordKey {
 
 /// Bonjour サービス公開＋接続受付（サーバー側）
 /// NWListener を使って接続を待ち受け、Bonjour でサービスを公開する
-/// Blue Switch 互換: 素の TCP（NWProtocolFramer なし）、サービスタイプ `_blueswitch._tcp.`
+/// Blue Switch 互換: 素の TCP（NWProtocolFramer なし）、サービスタイプ `_magicswitch._tcp.`
 public actor PeerListener {
     private let logger = MagicSwitchLogger.network
     private let serviceType: String
@@ -21,8 +21,8 @@ public actor PeerListener {
     /// 新しい接続が確立された際のコールバック
     private var connectionHandler: (@Sendable (NWConnection) -> Void)?
 
-    /// Blue Switch 互換サービスタイプ
-    public init(serviceType: String = "_blueswitch._tcp.") {
+    /// Magic Switch サービスタイプ
+    public init(serviceType: String = "_magicswitch._tcp.") {
         self.serviceType = serviceType
     }
 
