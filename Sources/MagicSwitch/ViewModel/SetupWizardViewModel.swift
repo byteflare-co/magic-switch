@@ -18,7 +18,6 @@ public final class SetupWizardViewModel: ObservableObject {
 
     // Step 1: Permissions
     @Published public var bluetoothPermissionGranted = false
-    @Published public var accessibilityPermissionGranted = false
     @Published public var localNetworkPermissionGranted = false
 
     // Step 2: Devices
@@ -96,12 +95,6 @@ public final class SetupWizardViewModel: ObservableObject {
         let btAuth = CBManager.authorization
         bluetoothPermissionGranted = (btAuth == .allowedAlways)
 
-        // Accessibility 権限: AXIsProcessTrustedWithOptions でチェック
-        // prompt: true にすると未許可時にシステムダイアログを表示する
-        // 注意: 権限変更後はアプリの再起動が必要な場合がある
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false] as CFDictionary
-        accessibilityPermissionGranted = AXIsProcessTrustedWithOptions(options)
-
         // Local Network 権限: macOS では直接チェックする API がないため、
         // Bonjour 使用時にシステムが自動的にプロンプトを表示する
         // Bluetooth が許可されている場合は Network も許可済みと推定
@@ -115,12 +108,6 @@ public final class SetupWizardViewModel: ObservableObject {
         }
     }
 
-    /// Accessibility のシステム設定を開く
-    public func openAccessibilitySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
-        }
-    }
 
     public func discoverDevices() {
         isDiscoveringDevices = true

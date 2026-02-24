@@ -147,13 +147,6 @@ struct PermissionsStepView: View {
                     onOpenSettings: { viewModel.openBluetoothSettings() }
                 )
                 PermissionRow(
-                    name: "Accessibility（任意 - ショートカット用）",
-                    icon: "hand.raised",
-                    isGranted: viewModel.accessibilityPermissionGranted,
-                    isOptional: true,
-                    onOpenSettings: { viewModel.openAccessibilitySettings() }
-                )
-                PermissionRow(
                     name: "Local Network",
                     icon: "network",
                     isGranted: viewModel.localNetworkPermissionGranted
