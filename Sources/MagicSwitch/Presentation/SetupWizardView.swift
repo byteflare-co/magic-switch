@@ -147,9 +147,10 @@ struct PermissionsStepView: View {
                     onOpenSettings: { viewModel.openBluetoothSettings() }
                 )
                 PermissionRow(
-                    name: "Accessibility",
+                    name: "Accessibility（任意 - ショートカット用）",
                     icon: "hand.raised",
                     isGranted: viewModel.accessibilityPermissionGranted,
+                    isOptional: true,
                     onOpenSettings: { viewModel.openAccessibilitySettings() }
                 )
                 PermissionRow(
@@ -176,6 +177,7 @@ struct PermissionRow: View {
     let name: String
     let icon: String
     let isGranted: Bool
+    var isOptional: Bool = false
     var onOpenSettings: (() -> Void)? = nil
 
     var body: some View {
@@ -197,10 +199,22 @@ struct PermissionRow: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
             }
-            Text(isGranted ? "許可済み" : "未許可")
-                .foregroundStyle(isGranted ? .green : .orange)
-                .font(.caption)
-                .fontWeight(.medium)
+            if isGranted {
+                Text("許可済み")
+                    .foregroundStyle(.green)
+                    .font(.caption)
+                    .fontWeight(.medium)
+            } else if isOptional {
+                Text("スキップ可")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .fontWeight(.medium)
+            } else {
+                Text("未許可")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+                    .fontWeight(.medium)
+            }
         }
         .padding(.vertical, 4)
     }

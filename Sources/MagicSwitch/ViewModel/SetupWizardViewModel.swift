@@ -96,8 +96,11 @@ public final class SetupWizardViewModel: ObservableObject {
         let btAuth = CBManager.authorization
         bluetoothPermissionGranted = (btAuth == .allowedAlways)
 
-        // Accessibility 権限: AXIsProcessTrusted() を使用
-        accessibilityPermissionGranted = AXIsProcessTrusted()
+        // Accessibility 権限: AXIsProcessTrustedWithOptions でチェック
+        // prompt: true にすると未許可時にシステムダイアログを表示する
+        // 注意: 権限変更後はアプリの再起動が必要な場合がある
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false] as CFDictionary
+        accessibilityPermissionGranted = AXIsProcessTrustedWithOptions(options)
 
         // Local Network 権限: macOS では直接チェックする API がないため、
         // Bonjour 使用時にシステムが自動的にプロンプトを表示する
