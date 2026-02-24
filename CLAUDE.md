@@ -58,6 +58,29 @@ Presentation (Views, MenuBarController)
 - `LaunchAtLogin-Modern` — Login item registration
 - System frameworks: IOBluetooth, Network, AppKit, SwiftUI
 
+## Deploy Procedure
+
+ユーザーから「デプロイ」「push してデプロイ」等の指示があった場合、以下を一連で実行する:
+
+1. **コミット & プッシュ** — 未コミットの変更があればコミットして `git push`
+2. **バージョンアップ** — `Resources/Info.plist` の `CFBundleVersion` と `CFBundleShortVersionString` をインクリメント（パッチ: x.y.Z、マイナー: x.Y.0、メジャー: X.0.0）。指定がなければパッチを上げる。バージョンアップのコミット & プッシュも行う
+3. **タグ** — `git tag v{VERSION}` でタグを打ち `git push --tags`
+4. **ビルド** — `make bundle` でリリースビルド & .app バンドル作成
+5. **GitHub Release** — `gh release create v{VERSION}` で zip をアップロード。リリースノートは直前のタグからの変更を要約する。フォーマット:
+   ```
+   ## v{VERSION}
+
+   ### Changes
+   - 変更点を箇条書き
+
+   ### Install / Update
+   \```bash
+   brew tap byteflare-co/tap
+   brew install --cask magic-switch
+   \```
+   ```
+6. **再インストール & 起動** — 既存プロセスを終了し、`open .build/release/MagicSwitch.app` で起動
+
 ## Protocol
 
 Text-based newline-delimited commands over TCP: `CONNECT_ALL`, `UNREGISTER_ALL`, `HEALTH_CHECK`, `OP_SUCCESS`, `OP_FAILED`, `NOTIFICATION`, `SYNC_PERIPHERALS`, `PERIPHERAL_DATA`. See `docs/blue-switch-spec.md` for full spec.
