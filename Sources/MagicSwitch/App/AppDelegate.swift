@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
     private var menuBarViewModel: MenuBarViewModel?
     private var wizardWindow: NSWindow?
+    private var settingsWindow: NSWindow?
     private var _settingsViewModel: SettingsViewModel?
 
     // メニューバーアプリなので、全ウィンドウを閉じてもアプリを終了しない
@@ -95,12 +96,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = mainMenu
     }
 
-    @objc private func openSettings() {
+    @objc func openSettings() {
+        // 既存のウィンドウがあれば前面に出す
+        if let window = settingsWindow, window.isVisible {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let vm = settingsViewModel()
+        let settingsView = SettingsView(viewModel: vm)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 440),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Magic Switch 設定"
+        window.contentView = NSHostingView(rootView: settingsView)
+        window.center()
+
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        DispatchQueue.main.async {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        }
+        window.makeKeyAndOrderFront(nil)
+        self.settingsWindow = window
     }
 
     private func setupMenuBar() {
