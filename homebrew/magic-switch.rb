@@ -1,5 +1,5 @@
 cask "magic-switch" do
-  version "1.0.0"
+  version "1.1.1"
   sha256 :no_check
 
   url "https://github.com/byteflare-co/magic-switch/releases/download/v#{version}/MagicSwitch-#{version}.zip"
