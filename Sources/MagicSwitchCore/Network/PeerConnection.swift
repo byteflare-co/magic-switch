@@ -9,10 +9,10 @@ public actor PeerConnection: PeerCommunicating {
     private let logger = MagicSwitchLogger.network
     private let connection: NWConnection
     private var state: PeerConnectionState = .idle
-    private var receiveContinuation: CheckedContinuation<DeviceCommand, Error>?
+    private var receiveContinuation: CheckedContinuation<DeviceMessage, Error>?
 
     /// 受信メッセージのコールバック
-    private var receiveHandler: (@Sendable (DeviceCommand) -> Void)?
+    private var receiveHandler: (@Sendable (DeviceMessage) -> Void)?
 
     /// 受信バッファ（改行区切りテキストの途中受信に対応）
     private var receiveBuffer: String = ""
@@ -39,7 +39,7 @@ public actor PeerConnection: PeerCommunicating {
     }
 
     /// 受信メッセージのハンドラを設定
-    public func setReceiveHandler(_ handler: @escaping @Sendable (DeviceCommand) -> Void) {
+    public func setReceiveHandler(_ handler: @escaping @Sendable (DeviceMessage) -> Void) {
         self.receiveHandler = handler
     }
 
@@ -103,8 +103,32 @@ public actor PeerConnection: PeerCommunicating {
         logger.debug("Sent command: \(command.rawValue)")
     }
 
+    /// コマンド + アドレスリストの送信
+    public func send(_ command: DeviceCommand, addresses: [String]) async throws {
+        guard state == .connected else {
+            throw MagicSwitchError.peerUnreachable(hostId: UUID())
+        }
+
+        let data = TextMessageProtocol.encode(command, addresses: addresses)
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            connection.send(
+                content: data,
+                completion: .contentProcessed { error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            )
+        }
+
+        logger.debug("Sent command: \(command.rawValue) with \(addresses.count) address(es)")
+    }
+
     /// メッセージの受信（単一メッセージ）
-    public func receive() async throws -> DeviceCommand {
+    public func receive() async throws -> DeviceMessage {
         try await withCheckedThrowingContinuation { continuation in
             self.receiveContinuation = continuation
         }
@@ -114,10 +138,10 @@ public actor PeerConnection: PeerCommunicating {
     public func sendAndWait(
         _ command: DeviceCommand,
         timeout: Duration = .seconds(15)
-    ) async throws -> DeviceCommand {
+    ) async throws -> DeviceMessage {
         try await send(command)
 
-        return try await withThrowingTaskGroup(of: DeviceCommand.self) { group in
+        return try await withThrowingTaskGroup(of: DeviceMessage.self) { group in
             group.addTask {
                 try await self.receive()
             }
@@ -220,6 +244,7 @@ public actor PeerConnection: PeerCommunicating {
     }
 
     /// 受信バッファを処理し、改行区切りでコマンドをパース
+    /// `COMMAND:payload` と `COMMAND` の両方に対応
     private func processReceiveBuffer() {
         while let newlineIndex = receiveBuffer.firstIndex(of: "\n") {
             let line = String(receiveBuffer[receiveBuffer.startIndex..<newlineIndex])
@@ -227,18 +252,22 @@ public actor PeerConnection: PeerCommunicating {
 
             guard !line.isEmpty else { continue }
 
-            guard let command = DeviceCommand(rawValue: line) else {
+            guard let message = TextMessageProtocol.decodeLine(line) else {
                 logger.warning("Unknown command received: \(line)")
                 continue
             }
 
-            logger.debug("Received command: \(command.rawValue)")
+            if let payload = message.payload {
+                logger.debug("Received command: \(message.command.rawValue) with payload: \(payload)")
+            } else {
+                logger.debug("Received command: \(message.command.rawValue)")
+            }
 
             if let continuation = receiveContinuation {
                 receiveContinuation = nil
-                continuation.resume(returning: command)
+                continuation.resume(returning: message)
             } else {
-                receiveHandler?(command)
+                receiveHandler?(message)
             }
         }
     }
