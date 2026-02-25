@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MagicSwitchLogger.bootstrap()
         MagicSwitchLogger.ui.info("Magic Switch started")
 
+        setupMainMenu()
         setupMenuBar()
         startNetworkService()
         registerKeyboardShortcuts()
@@ -45,6 +46,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Private
+
+    /// .accessory アプリでもメインメニューのキーエクイバレントは有効。
+    /// ポップオーバー表示中に Cmd+, で設定を開けるようにする。
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+
+        let settingsItem = NSMenuItem(
+            title: "設定...",
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        appMenu.addItem(settingsItem)
+
+        appMenu.addItem(.separator())
+
+        let quitItem = NSMenuItem(
+            title: "終了",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        appMenu.addItem(quitItem)
+
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        NSApp.mainMenu = mainMenu
+    }
+
+    @objc private func openSettings() {
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
 
     private func setupMenuBar() {
         let viewModel = container.makeMenuBarViewModel()
