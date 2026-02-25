@@ -175,17 +175,30 @@ Tester からテスト結果を受けたら:
 
 ---
 
-### Phase 6: PR作成＆完了
+### Phase 6: PR作成
 
 1. `TaskUpdate` で「PR作成」タスクを `in_progress` にする
 2. `Skill` ツールで `pr` スキルを実行する
 3. `TaskUpdate` で「PR作成」タスクを `completed` にする
-4. チームメンバーを `SendMessage` の `shutdown_request` でシャットダウンする
-5. `TeamDelete` でチームを削除する
 
 ---
 
-### Phase 7: 完了報告
+### Phase 7: チーム解散（必須）
+
+⚠️ **このフェーズは必ず実行すること。スキップ厳禁。**
+
+PR作成が完了したら、以下の手順でチームを解散する:
+
+1. `SendMessage` で `engineer` に `shutdown_request` を送信する
+2. `SendMessage` で `tester` に `shutdown_request` を送信する
+3. 両メンバーの shutdown_response を待つ（自動で届く）
+4. 両メンバーがシャットダウンしたことを確認したら `TeamDelete` でチームを削除する
+
+**注意:** TeamDelete はメンバーが全員シャットダウン済みでないと失敗する。必ず shutdown_request → response 完了後に実行すること。
+
+---
+
+### Phase 8: 完了報告
 
 以下の情報をサマリーとして出力する:
 

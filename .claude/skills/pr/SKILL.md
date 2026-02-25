@@ -72,9 +72,18 @@ user-invocable: true
 #### 3c: メインリポジトリ同期＆ローカルブランチ削除
 
 **ワークツリーから実行した場合:**
-1. `MAIN_REPO` ディレクトリに移動する
-2. `git pull origin main` でmainを最新化する
-3. `git worktree remove <現在のワークツリーパス>` でワークツリーを削除する（ローカルブランチも自動削除される）
+
+⚠️ **重要:** ワークツリー内でシェルcwdが設定されているため、ワークツリー削除後はcwdが無効になる。全コマンドを1つのBash呼び出しに `&&` チェインで結合し、先頭で必ず `cd $MAIN_REPO` すること。分割して複数のBash呼び出しにすると、cwdが削除済みパスを指してエラーが連発する。リトライ禁止。
+
+以下を **1つのBashコマンド** として実行する:
+```bash
+cd $MAIN_REPO && git pull origin main && git worktree remove <ワークツリーパス> 2>/dev/null; cd $MAIN_REPO && git worktree prune && git branch -D <ワークツリーブランチ名> 2>/dev/null; echo "cleanup done"
+```
+
+- `git worktree remove` が失敗しても `git worktree prune` で残骸を掃除する
+- ブランチ削除が失敗してもエラーは無視する（既に削除済みの可能性）
+- 最後に `echo "cleanup done"` で正常終了を確認する
+- **このステップが失敗しても再試行しない。** 1回実行して結果を報告するだけにする
 
 **通常のブランチから実行した場合（ワークツリーでない）:**
 1. `git checkout main` でmainに切り替える
