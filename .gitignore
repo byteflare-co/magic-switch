@@ -14,5 +14,8 @@ DerivedData/
 *.zip
 *.dmg
 
+# Claude Code
+.claude/worktrees/
+
 # macOS
 .DS_Store
