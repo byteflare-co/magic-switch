@@ -32,8 +32,7 @@ final class MenuBarController: NSObject {
         popover.animates = true
         popover.contentViewController = NSHostingController(
             rootView: PopoverContentView(viewModel: viewModel, onSettingsTapped: { [weak self] in
-                self?.popover.performClose(nil)
-                self?.openSettings()
+                self?.openSettingsFromPopover()
             })
         )
 
@@ -74,7 +73,9 @@ final class MenuBarController: NSObject {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
         }
-        stopGlobalClickMonitor()
+        if let monitor = globalClickMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
 
     // MARK: - Popover
@@ -126,6 +127,7 @@ final class MenuBarController: NSObject {
         // ポップオーバーが開いていれば閉じる
         if popover.isShown {
             popover.performClose(nil)
+            stopGlobalClickMonitor()
         }
 
         let menu = buildContextMenu()
@@ -161,6 +163,15 @@ final class MenuBarController: NSObject {
     }
 
     // MARK: - Actions
+
+    /// ポップオーバーの歯車ボタンから設定を開く
+    private func openSettingsFromPopover() {
+        popover.performClose(nil)
+        stopGlobalClickMonitor()
+        DispatchQueue.main.async { [weak self] in
+            self?.openSettings()
+        }
+    }
 
     @objc private func openSettings() {
         (NSApp.delegate as? AppDelegate)?.openSettings()
