@@ -1,15 +1,18 @@
 import SwiftUI
 import MagicSwitchCore
 
+extension Notification.Name {
+    static let openSettingsFromPopover = Notification.Name("openSettingsFromPopover")
+}
+
 /// メニューバーポップオーバーのメインコンテンツ
 struct PopoverContentView: View {
     @ObservedObject var viewModel: MenuBarViewModel
-    var onSettingsTapped: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
             // ヘッダー
-            PopoverHeaderView(onSettingsTapped: onSettingsTapped)
+            PopoverHeaderView()
 
             Divider()
 
@@ -62,8 +65,6 @@ struct PopoverContentView: View {
 // MARK: - Header
 
 struct PopoverHeaderView: View {
-    var onSettingsTapped: (() -> Void)?
-
     var body: some View {
         HStack {
             Text("Magic Switch")
@@ -72,11 +73,13 @@ struct PopoverHeaderView: View {
             Spacer()
 
             Button(action: {
-                onSettingsTapped?()
+                NotificationCenter.default.post(name: .openSettingsFromPopover, object: nil)
             }) {
                 Image(systemName: "gear")
                     .font(.body)
                     .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }

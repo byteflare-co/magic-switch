@@ -14,6 +14,7 @@ final class MenuBarController: NSObject {
     private var cancellables = Set<AnyCancellable>()
     private var eventMonitor: Any?
     private var globalClickMonitor: Any?
+    private var settingsObserver: Any?
 
     init(viewModel: MenuBarViewModel) {
         self.viewModel = viewModel
@@ -31,10 +32,17 @@ final class MenuBarController: NSObject {
         popover.behavior = .transient
         popover.animates = true
         popover.contentViewController = NSHostingController(
-            rootView: PopoverContentView(viewModel: viewModel, onSettingsTapped: { [weak self] in
-                self?.openSettingsFromPopover()
-            })
+            rootView: PopoverContentView(viewModel: viewModel)
         )
+
+        // NotificationCenter 経由で歯車ボタンのタップを受け取る
+        settingsObserver = NotificationCenter.default.addObserver(
+            forName: .openSettingsFromPopover,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.openSettingsFromPopover()
+        }
 
         if let button = statusItem.button {
             button.image = NSImage(
@@ -75,6 +83,9 @@ final class MenuBarController: NSObject {
         }
         if let monitor = globalClickMonitor {
             NSEvent.removeMonitor(monitor)
+        }
+        if let observer = settingsObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
