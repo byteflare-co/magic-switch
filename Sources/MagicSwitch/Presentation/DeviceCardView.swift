@@ -8,7 +8,7 @@ struct DeviceCardView: View {
     var body: some View {
         HStack(spacing: 12) {
             // デバイスアイコン
-            Image(systemName: device.type == .keyboard ? "keyboard.fill" : "trackpad.fill")
+            Image(systemName: device.type == .keyboard ? "keyboard.fill" : "rectangle.on.rectangle.angled")
                 .font(.title2)
                 .foregroundStyle(device.isConnected ? .primary : .secondary)
                 .frame(width: 32, height: 32)
