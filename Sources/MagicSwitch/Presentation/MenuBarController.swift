@@ -13,6 +13,7 @@ final class MenuBarController: NSObject {
     private let viewModel: MenuBarViewModel
     private var cancellables = Set<AnyCancellable>()
     private var eventMonitor: Any?
+    private var globalClickMonitor: Any?
 
     init(viewModel: MenuBarViewModel) {
         self.viewModel = viewModel
@@ -73,6 +74,7 @@ final class MenuBarController: NSObject {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
         }
+        stopGlobalClickMonitor()
     }
 
     // MARK: - Popover
@@ -80,6 +82,7 @@ final class MenuBarController: NSObject {
     @objc private func togglePopover() {
         if popover.isShown {
             popover.performClose(nil)
+            stopGlobalClickMonitor()
         } else {
             showPopover()
         }
@@ -87,8 +90,33 @@ final class MenuBarController: NSObject {
 
     func showPopover() {
         if let button = statusItem.button {
+            NSApp.activate(ignoringOtherApps: true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
             viewModel.refresh()
+            startGlobalClickMonitor()
+        }
+    }
+
+    // MARK: - Global Click Monitor
+
+    private func startGlobalClickMonitor() {
+        stopGlobalClickMonitor()
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            if self.popover.isShown {
+                self.popover.performClose(nil)
+            }
+            self.stopGlobalClickMonitor()
+        }
+    }
+
+    private func stopGlobalClickMonitor() {
+        if let monitor = globalClickMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalClickMonitor = nil
         }
     }
 
