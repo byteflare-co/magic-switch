@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
     private var menuBarViewModel: MenuBarViewModel?
     private var wizardWindow: NSWindow?
+    private var _settingsViewModel: SettingsViewModel?
 
     // メニューバーアプリなので、全ウィンドウを閉じてもアプリを終了しない
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -191,7 +192,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Accessors for SwiftUI
 
     func settingsViewModel() -> SettingsViewModel {
-        container.makeSettingsViewModel()
+        if let vm = _settingsViewModel {
+            return vm
+        }
+        let vm = container.makeSettingsViewModel()
+        _settingsViewModel = vm
+        return vm
     }
 
     func setupWizardViewModel() -> SetupWizardViewModel {

@@ -213,17 +213,126 @@ struct ShortcutsTab: View {
 
             Section("ホスト切り替え") {
                 LabeledContent("ホスト 1 に切り替え") {
-                    KeyboardShortcuts.Recorder(for: .switchToHost1)
+                    ShortcutRecorderView(name: .switchToHost1)
                 }
                 LabeledContent("ホスト 2 に切り替え") {
-                    KeyboardShortcuts.Recorder(for: .switchToHost2)
+                    ShortcutRecorderView(name: .switchToHost2)
                 }
                 LabeledContent("ホスト 3 に切り替え") {
-                    KeyboardShortcuts.Recorder(for: .switchToHost3)
+                    ShortcutRecorderView(name: .switchToHost3)
                 }
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// KeyboardShortcuts.Recorder の代替（Bundle.module に依存しないカスタム実装）
+struct ShortcutRecorderView: View {
+    let name: KeyboardShortcuts.Name
+
+    @State private var isRecording = false
+    @State private var shortcutText = ""
+    @State private var eventMonitor: Any?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(isRecording ? "キーを押してください…" : (shortcutText.isEmpty ? "ショートカットを録音" : shortcutText))
+                .foregroundStyle(isRecording ? .secondary : (shortcutText.isEmpty ? .tertiary : .primary))
+                .frame(minWidth: 120)
+
+            if !shortcutText.isEmpty && !isRecording {
+                Button(action: clearShortcut) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isRecording ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(isRecording ? Color.accentColor : Color.clear, lineWidth: 1)
+        )
+        .onTapGesture { startRecording() }
+        .onAppear { loadCurrentShortcut() }
+        .onDisappear { removeMonitor() }
+    }
+
+    private func loadCurrentShortcut() {
+        if let shortcut = KeyboardShortcuts.getShortcut(for: name) {
+            shortcutText = "\(shortcut)"
+        } else {
+            shortcutText = ""
+        }
+    }
+
+    private static let functionKeyCodes: Set<UInt16> = [
+        122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, // F1-F12
+        105, 107, 113, 106, 64, 79, 80 // F13-F19
+    ]
+
+    private func startRecording() {
+        guard !isRecording else { return }
+        isRecording = true
+        KeyboardShortcuts.disable(.switchToHost1, .switchToHost2, .switchToHost3)
+
+        let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let modifiers = event.modifierFlags
+                .intersection(.deviceIndependentFlagsMask)
+                .subtracting([.capsLock, .numericPad, .function])
+
+            // Escape でキャンセル
+            if event.keyCode == 53 && modifiers.isEmpty {
+                stopRecording()
+                return nil
+            }
+
+            // Delete/Backspace でクリア
+            if (event.keyCode == 51 || event.keyCode == 117) && modifiers.isEmpty {
+                clearShortcut()
+                stopRecording()
+                return nil
+            }
+
+            let isFunctionKey = Self.functionKeyCodes.contains(event.keyCode)
+
+            // 修飾キー (Cmd/Ctrl/Opt) が必要（Fn キー以外）
+            guard !modifiers.subtracting(.shift).isEmpty || isFunctionKey,
+                  let shortcut = KeyboardShortcuts.Shortcut(event: event) else {
+                NSSound.beep()
+                return nil
+            }
+
+            KeyboardShortcuts.setShortcut(shortcut, for: name)
+            shortcutText = "\(shortcut)"
+            stopRecording()
+            return nil
+        }
+        eventMonitor = monitor
+    }
+
+    private func stopRecording() {
+        removeMonitor()
+        isRecording = false
+        KeyboardShortcuts.enable(.switchToHost1, .switchToHost2, .switchToHost3)
+    }
+
+    private func removeMonitor() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+    }
+
+    private func clearShortcut() {
+        KeyboardShortcuts.setShortcut(nil, for: name)
+        shortcutText = ""
     }
 }
 

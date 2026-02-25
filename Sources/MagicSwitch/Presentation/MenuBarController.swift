@@ -30,7 +30,10 @@ final class MenuBarController: NSObject {
         popover.behavior = .transient
         popover.animates = true
         popover.contentViewController = NSHostingController(
-            rootView: PopoverContentView(viewModel: viewModel)
+            rootView: PopoverContentView(viewModel: viewModel, onSettingsTapped: { [weak self] in
+                self?.popover.performClose(nil)
+                self?.openSettings()
+            })
         )
 
         if let button = statusItem.button {
@@ -132,8 +135,10 @@ final class MenuBarController: NSObject {
     // MARK: - Actions
 
     @objc private func openSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         NSApp.activate(ignoringOtherApps: true)
+        DispatchQueue.main.async {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        }
     }
 
     @objc private func quit() {

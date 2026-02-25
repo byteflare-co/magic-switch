@@ -27,6 +27,7 @@ if [ -f "Resources/blueutil" ]; then
     chmod +x "${APP_BUNDLE}/Contents/Resources/blueutil"
 fi
 
+
 # 5. Info.plist の配置
 if [ -f "Resources/Info.plist" ]; then
     cp "Resources/Info.plist" "${APP_BUNDLE}/Contents/"

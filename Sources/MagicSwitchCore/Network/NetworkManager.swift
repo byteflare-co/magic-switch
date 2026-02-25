@@ -155,22 +155,24 @@ public actor NetworkManager: NetworkManagerProtocol {
 
     /// 検出されたピアが自分自身かどうか判定
     private func isSelf(_ peer: PeerInfo) -> Bool {
-        // 1. Bonjour サービス名で判定
+        // 1. hostId (IOPlatformUUID) exact match — definitive
+        if let myId = self.hostId, peer.hostId == myId {
+            return true
+        }
+        // 2. Both have resolved hostIds that differ → definitely NOT self
+        if peer.hasResolvedHostId, self.hostId != nil {
+            return false
+        }
+        // 3-5. Name-based fallback (Blue Switch compatibility only)
         if let own = self.ownServiceName,
            let svc = peer.serviceName,
            svc.hasPrefix(own) {
             return true
         }
-        // 2. ホスト名で判定
         if let myName = self.hostName, peer.hostName.hasPrefix(myName) {
             return true
         }
-        // 3. ローカルホスト名で判定（古い Bonjour キャッシュ対応）
         if let local = self.localHostName, peer.hostName.hasPrefix(local) {
-            return true
-        }
-        // 4. hostId (IOPlatformUUID) で判定
-        if let myId = self.hostId, peer.hostId == myId {
             return true
         }
         return false
@@ -265,11 +267,31 @@ public actor NetworkManager: NetworkManagerProtocol {
                 logger.debug("Ignoring self: \(peerInfo.hostName)")
                 return
             }
+            // Deduplicate: remove stale entries with the same serviceName but different hostId
+            if let svcName = peerInfo.serviceName {
+                let staleKeys = discoveredPeers
+                    .filter { $0.value.serviceName == svcName && $0.key != peerInfo.hostId }
+                    .map(\.key)
+                for key in staleKeys {
+                    logger.debug("Removing stale peer entry: hostId=\(key) (replaced by \(peerInfo.hostId))")
+                    discoveredPeers.removeValue(forKey: key)
+                }
+            }
             discoveredPeers[peerInfo.hostId] = peerInfo
-            logger.info("Peer discovered: \(peerInfo.hostName) (\(peerInfo.hostId))")
+            logger.info("Peer discovered: \(peerInfo.hostName) (\(peerInfo.hostId)) resolved=\(peerInfo.hasResolvedHostId)")
 
         case .lost(let peerInfo):
             discoveredPeers.removeValue(forKey: peerInfo.hostId)
+            // Also clean up by serviceName in case hostId changed since entry was added
+            if let svcName = peerInfo.serviceName {
+                let matchingKeys = discoveredPeers
+                    .filter { $0.value.serviceName == svcName }
+                    .map(\.key)
+                for key in matchingKeys {
+                    logger.debug("Cleaning up peer by serviceName: hostId=\(key) svc=\(svcName)")
+                    discoveredPeers.removeValue(forKey: key)
+                }
+            }
             logger.info("Peer lost: \(peerInfo.hostName) (\(peerInfo.hostId))")
         }
     }

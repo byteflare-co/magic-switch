@@ -4,11 +4,12 @@ import MagicSwitchCore
 /// メニューバーポップオーバーのメインコンテンツ
 struct PopoverContentView: View {
     @ObservedObject var viewModel: MenuBarViewModel
+    var onSettingsTapped: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
             // ヘッダー
-            PopoverHeaderView()
+            PopoverHeaderView(onSettingsTapped: onSettingsTapped)
 
             Divider()
 
@@ -61,6 +62,8 @@ struct PopoverContentView: View {
 // MARK: - Header
 
 struct PopoverHeaderView: View {
+    var onSettingsTapped: (() -> Void)?
+
     var body: some View {
         HStack {
             Text("Magic Switch")
@@ -69,8 +72,7 @@ struct PopoverHeaderView: View {
             Spacer()
 
             Button(action: {
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                NSApp.activate(ignoringOtherApps: true)
+                onSettingsTapped?()
             }) {
                 Image(systemName: "gear")
                     .font(.body)

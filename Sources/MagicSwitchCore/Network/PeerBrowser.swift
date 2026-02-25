@@ -32,16 +32,20 @@ public actor PeerBrowser: PeerDiscovering {
             )
 
             newBrowser.browseResultsChangedHandler = { results, changes in
+                let logger = MagicSwitchLogger.network
                 for change in changes {
                     switch change {
                     case .added(let result):
                         let peerInfo = Self.extractPeerInfo(from: result)
+                        logger.debug("PeerBrowser: .added '\(peerInfo.hostName)' hostId=\(peerInfo.hostId) resolved=\(peerInfo.hasResolvedHostId) svc=\(peerInfo.serviceName ?? "nil")")
                         continuation.yield(.found(peerInfo))
                     case .removed(let result):
                         let peerInfo = Self.extractPeerInfo(from: result)
+                        logger.debug("PeerBrowser: .removed '\(peerInfo.hostName)' hostId=\(peerInfo.hostId) svc=\(peerInfo.serviceName ?? "nil")")
                         continuation.yield(.lost(peerInfo))
                     case .changed(old: _, new: let newResult, flags: _):
                         let peerInfo = Self.extractPeerInfo(from: newResult)
+                        logger.debug("PeerBrowser: .changed '\(peerInfo.hostName)' hostId=\(peerInfo.hostId) resolved=\(peerInfo.hasResolvedHostId) svc=\(peerInfo.serviceName ?? "nil")")
                         continuation.yield(.found(peerInfo))
                     case .identical:
                         break
@@ -98,8 +102,10 @@ public actor PeerBrowser: PeerDiscovering {
     /// NWBrowser.Result から PeerInfo を抽出
     /// Blue Switch 互換: サービス名はコンピュータ名をそのまま使用
     private static func extractPeerInfo(from result: NWBrowser.Result) -> PeerInfo {
+        let logger = MagicSwitchLogger.network
         var hostName = "Unknown"
         var hostId = UUID().uuidString
+        var hasResolvedHostId = false
         var version = "1.0"
         var serviceName: String?
 
@@ -114,6 +120,7 @@ public actor PeerBrowser: PeerDiscovering {
         if case .bonjour(let txtRecord) = result.metadata {
             if let value = txtRecord["hostId"] {
                 hostId = value
+                hasResolvedHostId = true
             }
             if let value = txtRecord["hostName"] {
                 hostName = value
@@ -121,6 +128,10 @@ public actor PeerBrowser: PeerDiscovering {
             if let value = txtRecord["version"] {
                 version = value
             }
+        }
+
+        if !hasResolvedHostId {
+            logger.debug("PeerBrowser: hostId not in TXT record, using placeholder for '\(hostName)'")
         }
 
         let endpointDescription: String?
@@ -134,6 +145,7 @@ public actor PeerBrowser: PeerDiscovering {
         return PeerInfo(
             hostName: hostName,
             hostId: hostId,
+            hasResolvedHostId: hasResolvedHostId,
             version: version,
             endpoint: endpointDescription,
             serviceName: serviceName

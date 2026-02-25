@@ -49,20 +49,46 @@ public actor DeviceDiscoveryService {
             default: []
         )
         let peers = await network.getDiscoveredPeers()
+        logger.debug("refreshHostStatus: \(hosts.count) host(s), \(peers.count) peer(s)")
 
-        return hosts.map { host in
+        var needsSave = false
+        let updatedHosts = hosts.map { host -> HostMac in
             var updated = host
-            if let peerHostId = host.peerHostId {
-                updated.isOnline = peers.contains { $0.hostId == peerHostId }
+            // Primary match: peerHostId exact match
+            if let peerHostId = host.peerHostId,
+               peers.contains(where: { $0.hostId == peerHostId }) {
+                updated.isOnline = true
+                logger.debug("Host '\(host.hostName)' matched by peerHostId")
+            } else if let matched = peers.first(where: { $0.hostName == host.hostName }) {
+                // Fallback: hostName match + auto-repair peerHostId
+                updated.isOnline = true
+                if updated.peerHostId != matched.hostId {
+                    logger.info("Auto-repairing peerHostId for '\(host.hostName)': \(host.peerHostId ?? "nil") → \(matched.hostId)")
+                    updated.peerHostId = matched.hostId
+                    needsSave = true
+                }
+                logger.debug("Host '\(host.hostName)' matched by hostName fallback")
             } else {
-                // レガシーホスト: hostName でフォールバックマッチ
-                updated.isOnline = peers.contains { $0.hostName == host.hostName }
+                updated.isOnline = false
+                logger.debug("Host '\(host.hostName)' not found in peers (peerHostId=\(host.peerHostId ?? "nil"))")
             }
             if updated.isOnline {
                 updated.lastSeen = Date()
             }
             return updated
         }
+
+        // Auto-repair: save updated peerHostIds so future matches work immediately
+        if needsSave {
+            do {
+                try await configStore.save(updatedHosts, to: "hosts.json")
+                logger.info("Saved auto-repaired host config")
+            } catch {
+                logger.error("Failed to save auto-repaired host config: \(error.localizedDescription)")
+            }
+        }
+
+        return updatedHosts
     }
 
     /// デバイスとピアの一括検出

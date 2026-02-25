@@ -5,6 +5,8 @@ public struct PeerInfo: Sendable, Hashable, Identifiable {
     public let id: UUID
     public let hostName: String
     public let hostId: String
+    /// hostId が TXT レコードから取得された場合は true、プレースホルダの場合は false
+    public let hasResolvedHostId: Bool
     public let version: String
     public let endpoint: String?
     /// Bonjour サービス名（自分自身フィルタ用）
@@ -14,6 +16,7 @@ public struct PeerInfo: Sendable, Hashable, Identifiable {
         id: UUID = UUID(),
         hostName: String,
         hostId: String,
+        hasResolvedHostId: Bool = false,
         version: String = "1.0",
         endpoint: String? = nil,
         serviceName: String? = nil
@@ -21,6 +24,7 @@ public struct PeerInfo: Sendable, Hashable, Identifiable {
         self.id = id
         self.hostName = hostName
         self.hostId = hostId
+        self.hasResolvedHostId = hasResolvedHostId
         self.version = version
         self.endpoint = endpoint
         self.serviceName = serviceName
