@@ -74,7 +74,9 @@ final class MenuBarController: NSObject {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
         }
-        stopGlobalClickMonitor()
+        if let monitor = globalClickMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
 
     // MARK: - Popover
