@@ -55,7 +55,8 @@ public protocol PeerDiscovering: Sendable {
 /// ピア通信プロトコル（Blue Switch テキストコマンド対応）
 public protocol PeerCommunicating: Sendable {
     func send(_ command: DeviceCommand) async throws
-    func receive() async throws -> DeviceCommand
+    func send(_ command: DeviceCommand, addresses: [String]) async throws
+    func receive() async throws -> DeviceMessage
     func getConnectionState() async -> PeerConnectionState
 }
 

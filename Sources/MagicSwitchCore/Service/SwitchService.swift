@@ -111,9 +111,9 @@ public actor SwitchService {
 
     /// ネットワークコマンドハンドラのセットアップ
     public func setup() async {
-        await network.setMessageHandler { [weak self] command, peerId in
+        await network.setMessageHandler { [weak self] message, peerId in
             guard let self else { return }
-            await self.handleCommand(command, from: peerId)
+            await self.handleCommand(message, from: peerId)
         }
     }
 
@@ -200,12 +200,25 @@ public actor SwitchService {
             }
 
             // 2. 切断完了をポーリング確認 (最大5回 × 0.5秒)
-            let allDisconnected = await bluetooth.pollForDisconnection(devices: devices)
+            var allDisconnected = await bluetooth.pollForDisconnection(devices: devices)
             if !allDisconnected {
-                logger.warning("Not all devices disconnected after polling, proceeding anyway")
+                // まだ接続中のデバイスを再 remove してリトライ
+                logger.warning("Not all devices disconnected, retrying remove for remaining devices")
+                for device in devices {
+                    if await bluetooth.isDeviceConnected(device) {
+                        try? await bluetooth.releaseDevice(device)
+                    }
+                }
+                allDisconnected = await bluetooth.pollForDisconnection(devices: devices)
+                if !allDisconnected {
+                    logger.warning("Still not all disconnected after retry, proceeding anyway")
+                }
             }
 
-            // 3. 相手 Mac に CONNECT_ALL 送信
+            // BT スタックのクリーンアップ完了を待つ settling ディレイ
+            try await Task.sleep(for: .seconds(2))
+
+            // 3. 相手 Mac に CONNECT_ALL 送信（アドレスリスト付き）
             updateState(.switching(progress: SwitchProgress(
                 totalDevices: devices.count,
                 completedDevices: devices.count,
@@ -215,8 +228,9 @@ public actor SwitchService {
             guard let peerHostId = targetHost.peerHostId else {
                 throw MagicSwitchError.peerNotFound(hostId: targetHost.id)
             }
-            try await network.sendCommandToPeer(.connectAll, peerHostId: peerHostId)
-            logger.info("CONNECT_ALL sent to \(targetHost.label)")
+            let addresses = devices.map(\.address)
+            try await network.sendCommandToPeer(.connectAll, addresses: addresses, peerHostId: peerHostId)
+            logger.info("CONNECT_ALL sent to \(targetHost.label) with addresses: \(addresses)")
 
             // レスポンスを待機
             let response = try await waitForResponse(timeoutSeconds: 15)
@@ -263,12 +277,13 @@ public actor SwitchService {
         )))
 
         do {
-            // 1. 相手 Mac に UNREGISTER_ALL 送信
+            // 1. 相手 Mac に UNREGISTER_ALL 送信（アドレスリスト付き）
             guard let peerHostId = targetHost.peerHostId else {
                 throw MagicSwitchError.peerNotFound(hostId: targetHost.id)
             }
-            try await network.sendCommandToPeer(.unregisterAll, peerHostId: peerHostId)
-            logger.info("UNREGISTER_ALL sent to \(targetHost.label)")
+            let addresses = devices.map(\.address)
+            try await network.sendCommandToPeer(.unregisterAll, addresses: addresses, peerHostId: peerHostId)
+            logger.info("UNREGISTER_ALL sent to \(targetHost.label) with addresses: \(addresses)")
 
             // レスポンスを待機
             let response = try await waitForResponse(timeoutSeconds: 15)
@@ -279,8 +294,11 @@ public actor SwitchService {
                 )
             }
 
-            // 2. ローカルで全デバイスをペアリング+接続
+            // 2. ローカルで全デバイスをペアリング+接続（デバイス間に1秒インターバル）
             for (index, device) in devices.enumerated() {
+                if index > 0 {
+                    try await Task.sleep(for: .seconds(1))
+                }
                 try await withRetry(policy: retryPolicy) {
                     try await self.bluetooth.acquireDevice(device)
                 }
@@ -314,39 +332,53 @@ public actor SwitchService {
 
     // MARK: - Command Handling
 
-    /// 受信コマンドのハンドリング
-    private func handleCommand(_ command: DeviceCommand, from peerId: UUID) async {
-        logger.info("Handling command: \(command.rawValue) from \(peerId)")
+    /// 受信メッセージのハンドリング
+    private func handleCommand(_ message: DeviceMessage, from peerId: UUID) async {
+        logger.info("Handling command: \(message.command.rawValue) from \(peerId)")
 
-        switch command {
+        switch message.command {
         case .connectAll:
-            await handleConnectAllRequest(from: peerId)
+            await handleConnectAllRequest(message: message, from: peerId)
 
         case .unregisterAll:
-            await handleUnregisterAllRequest(from: peerId)
+            await handleUnregisterAllRequest(message: message, from: peerId)
 
         case .healthCheck:
             try? await network.sendCommand(.operationSuccess, to: peerId)
 
         case .operationSuccess, .operationFailed:
-            pendingResponse = command
+            pendingResponse = message.command
 
         case .notification:
             await notificationManager.notifyRemote(message: "相手 Mac から通知を受信しました")
 
         case .syncPeripherals, .peripheralData:
-            logger.debug("Sync command received (not implemented): \(command.rawValue)")
+            logger.debug("Sync command received (not implemented): \(message.command.rawValue)")
         }
     }
 
     /// CONNECT_ALL 受信時: 全デバイスをペアリング+接続
-    private func handleConnectAllRequest(from peerId: UUID) async {
+    /// メッセージにアドレスが含まれていればそれを使い、なければ peripherals.json にフォールバック
+    private func handleConnectAllRequest(message: DeviceMessage, from peerId: UUID) async {
         logger.info("Handling CONNECT_ALL request")
 
-        let devices = await loadRegisteredDeviceAddresses()
+        // メッセージのペイロードからアドレスを取得（フォールバック: peripherals.json）
+        let addresses: [String]
+        if !message.addresses.isEmpty {
+            addresses = message.addresses
+            logger.info("Using addresses from message payload: \(addresses)")
+        } else {
+            addresses = await loadRegisteredDeviceAddresses()
+            logger.info("Using addresses from peripherals.json: \(addresses)")
+        }
+
         var allSuccess = true
 
-        for address in devices {
+        for (index, address) in addresses.enumerated() {
+            // デバイス間に1秒のインターバル（HID プロファイル安定化）
+            if index > 0 {
+                try? await Task.sleep(for: .seconds(1))
+            }
             do {
                 let device = MagicDevice(
                     address: address,
@@ -369,10 +401,22 @@ public actor SwitchService {
     }
 
     /// UNREGISTER_ALL 受信時: 全デバイスを remove
-    private func handleUnregisterAllRequest(from peerId: UUID) async {
+    /// メッセージにアドレスが含まれていればそれを使い、なければローカル検出にフォールバック
+    private func handleUnregisterAllRequest(message: DeviceMessage, from peerId: UUID) async {
         logger.info("Handling UNREGISTER_ALL request")
 
-        let devices = await bluetooth.discoverMagicDevices()
+        // メッセージのペイロードからアドレスを取得（フォールバック: ローカル検出）
+        let devices: [MagicDevice]
+        if !message.addresses.isEmpty {
+            logger.info("Using addresses from message payload: \(message.addresses)")
+            devices = message.addresses.map { address in
+                MagicDevice(address: address, name: "Device-\(address)", type: .keyboard)
+            }
+        } else {
+            devices = await bluetooth.discoverMagicDevices()
+            logger.info("Using locally discovered devices: \(devices.map(\.address))")
+        }
+
         var allSuccess = true
 
         for device in devices {
@@ -383,6 +427,12 @@ public actor SwitchService {
                 logger.error("Failed to unregister device \(device.address): \(error)")
                 allSuccess = false
             }
+        }
+
+        // remove 後のポーリング確認 + settling ディレイ
+        if !devices.isEmpty {
+            let _ = await bluetooth.pollForDisconnection(devices: devices)
+            try? await Task.sleep(for: .seconds(1))
         }
 
         let response: DeviceCommand = allSuccess ? .operationSuccess : .operationFailed

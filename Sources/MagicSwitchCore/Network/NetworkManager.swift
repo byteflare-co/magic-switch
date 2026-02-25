@@ -26,7 +26,7 @@ public actor NetworkManager: NetworkManagerProtocol {
     private var heartbeatTask: Task<Void, Never>?
 
     // 受信メッセージハンドラ
-    private var messageHandler: (@Sendable (DeviceCommand, UUID) async -> Void)?
+    private var messageHandler: (@Sendable (DeviceMessage, UUID) async -> Void)?
 
     // ホスト情報
     private var hostName: String?
@@ -198,7 +198,7 @@ public actor NetworkManager: NetworkManagerProtocol {
 
     /// 受信メッセージのハンドラを設定
     public func setMessageHandler(
-        _ handler: @escaping @Sendable (DeviceCommand, UUID) async -> Void
+        _ handler: @escaping @Sendable (DeviceMessage, UUID) async -> Void
     ) {
         self.messageHandler = handler
     }
@@ -241,6 +241,29 @@ public actor NetworkManager: NetworkManagerProtocol {
             throw MagicSwitchError.peerNotFound(hostId: UUID())
         }
         try await connection.send(command)
+    }
+
+    /// コマンド + アドレスリストの送信（peerHostId で接続先を特定、未接続なら自動接続）
+    public func sendCommandToPeer(_ command: DeviceCommand, addresses: [String], peerHostId: String) async throws {
+        // 1. 既存の接続を peerMap から検索
+        if let uuid = peerMap[peerHostId],
+           let connection = connections[uuid] {
+            try await connection.send(command, addresses: addresses)
+            return
+        }
+
+        // 2. discoveredPeers から該当ピアを探して自動接続
+        guard let peerInfo = discoveredPeers[peerHostId] else {
+            throw MagicSwitchError.peerNotFound(hostId: UUID())
+        }
+
+        try await connectToPeer(peerInfo)
+
+        guard let uuid = peerMap[peerHostId],
+              let connection = connections[uuid] else {
+            throw MagicSwitchError.peerNotFound(hostId: UUID())
+        }
+        try await connection.send(command, addresses: addresses)
     }
 
     /// ピアがオンラインかどうか確認
@@ -317,10 +340,10 @@ public actor NetworkManager: NetworkManagerProtocol {
         try await connection.start()
 
         let peerId = peerInfo.id
-        await connection.setReceiveHandler { [weak self] command in
+        await connection.setReceiveHandler { [weak self] message in
             guard let self = self else { return }
             Task {
-                await self.handleReceivedCommand(command, from: peerId)
+                await self.handleReceivedMessage(message, from: peerId)
             }
         }
 
@@ -338,10 +361,10 @@ public actor NetworkManager: NetworkManagerProtocol {
             do {
                 try await connection.start()
 
-                await connection.setReceiveHandler { [weak self] command in
+                await connection.setReceiveHandler { [weak self] message in
                     guard let self = self else { return }
                     Task {
-                        await self.handleReceivedCommand(command, from: connectionId)
+                        await self.handleReceivedMessage(message, from: connectionId)
                     }
                 }
 
@@ -353,12 +376,12 @@ public actor NetworkManager: NetworkManagerProtocol {
         }
     }
 
-    /// 受信コマンドのハンドリング
-    private func handleReceivedCommand(_ command: DeviceCommand, from peerId: UUID) {
-        logger.debug("Received command from \(peerId): \(command.rawValue)")
+    /// 受信メッセージのハンドリング
+    private func handleReceivedMessage(_ message: DeviceMessage, from peerId: UUID) {
+        logger.debug("Received command from \(peerId): \(message.command.rawValue)")
 
         Task {
-            await messageHandler?(command, peerId)
+            await messageHandler?(message, peerId)
         }
     }
 
