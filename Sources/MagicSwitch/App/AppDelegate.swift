@@ -37,6 +37,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startNetworkService()
         registerKeyboardShortcuts()
         checkFirstLaunch()
+
+        // 設定ウィンドウが閉じたら .accessory ポリシーに戻す
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            guard let window = notification.object as? NSWindow,
+                  window.title.contains("Settings") || window.title.contains("設定") else { return }
+            DispatchQueue.main.async {
+                let visibleWindows = NSApp.windows.filter { $0.isVisible && $0 !== window }
+                if visibleWindows.isEmpty {
+                    NSApp.setActivationPolicy(.accessory)
+                }
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -80,8 +96,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        DispatchQueue.main.async {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        }
     }
 
     private func setupMenuBar() {

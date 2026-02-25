@@ -135,6 +135,7 @@ final class MenuBarController: NSObject {
     // MARK: - Actions
 
     @objc private func openSettings() {
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         DispatchQueue.main.async {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
